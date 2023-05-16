@@ -1,180 +1,725 @@
 package com.example.londonundergroundassignment;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
+import javafx.geometry.Point2D;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.text.DecimalFormat;
+import java.util.*;
 
 public class Controller implements Initializable {
+    public static Controller maincon;
+
+    private Graph graph = new Graph(); //Will be used to store the graph
+
+    private Map<String, Station> stations = new HashMap<>(); //Will be used to store all stations
+
     @FXML
-    public ComboBox<String> fromComboBox;
+    public Button clearMap;
+
     @FXML
-    public ComboBox<String> destinationComboBox;
+    public MenuButton waypointStation;
+
     @FXML
-    public Button searchButton;
+    public AnchorPane mapPane;
+
+    @FXML
+    public Button bfsSearchButton;
+
     @FXML
     public ImageView mapImageView;
-    @FXML
-    public TableView routesTableView;
-    @FXML
-    private Canvas canvasImage;
-    public String csvData = "Central Line,Notting Hill Gate,df002c,108,285\n" +
-            "Central Line,Queensway,df002c,164,272\n" +
-            "Central Line,Lancaster Gate,df002c,242,259\n" +
-            "Central Line,Marble Arch,df002c,352,242\n" +
-            "Central Line,Bond Street,df002c,410,236\n" +
-            "Central Line,Oxford Circus,df002c,460,227\n" +
-            "Central Line,Tottenham Court Road,df002c,527,213\n" +
-            "Central Line,Holborn,df002c,597,204\n" +
-            "Central Line,Chancery Lane,df002c,655,192\n" +
-            "Central Line,St. Paul's,df002c,743,232\n" +
-            "Central Line,Bank,df002c,797,245\n" +
-            "Central Line,Liverpool Street,df002c,837,199\n" +
-            "Picadilly Line,Earl's Court,002d73,105,462\n" +
-            "Picadilly Line,Gloucester Road,002d73,197,437\n" +
-            "Picadilly Line,South Kensington,002d73,254,441\n" +
-            "Picadilly Line,Knightsbridge,002d73,338,363\n" +
-            "Picadilly Line,Hyde Park Corner,002d73,389,353\n" +
-            "Picadilly Line,Green Park,002d73,452,313,\n" +
-            "Picadilly Line,Picadilly Circus,002d73,507,281\n" +
-            "Picadilly Line,Leicester Square,002d73,546,266\n" +
-            "Picadilly Line,Covent Garden,002d73,572,250\n" +
-            "Picadilly Line,Holborn,002d73,597,204\n" +
-            "Picadilly Line,Russell Square,002d73,568,145\n" +
-            "Picadilly Line,King's Cross St. Pancras,002d73,572,67\n" +
-            "Bakerloo Line,Paddington,ab6612,244,224\n" +
-            "Bakerloo Line,Edgware Road,ab6612,278,174\n" +
-            "Bakerloo Line,Marylebone,ab6612,323,151\n" +
-            "Bakerloo Line,Baker Street,ab6612,361,150\n" +
-            "Bakerloo Line,Regent's Park,ab6612,392,141\n" +
-            "Bakerloo Line,Oxford's Circus,ab6612,460,227\n" +
-            "Bakerloo Line,Picadilly Circus,ab6612,507,281\n" +
-            "Bakerloo Line,Charing Cross,ab6612,567,300\n" +
-            "Bakerloo Line,Embankment,ab6612,583,306\n" +
-            "Bakerloo Line,Waterloo,ab6612,633,344\n" +
-            "Bakerloo Line,Lambeth North,ab6612,650,390\n" +
-            "Bakerloo Line,Elephant & Castle,ab6612,723,438\n" +
-            "Circle Line,Edgware Road,f7dc00,292,181\n" +
-            "Circle Line,Paddington,f7dc00,242,212\n" +
-            "Circle Line,Paddington,f7dc00,244,224\n" +
-            "Circle Line,Bayswater,f7dc00,165,257\n" +
-            "Circle Line,Notting Hill Gate,f7dc00,108,285\n" +
-            "Circle Line,High Street Kensington,f7dc00,135,371\n" +
-            "Circle Line,Gloucester Road,f7dc00,197,437\n" +
-            "Circle Line,South Kensington,f7dc00,254,441\n" +
-            "Circle Line,Sloane Square,f7dc00,365,459\n" +
-            "Circle Line,Victoria,f7dc00,440,416\n" +
-            "Circle Line,St. James Park,f7dc00,511,387\n" +
-            "Circle Line,Westminster,f7dc00,563,371\n" +
-            "Circle Line,Embankment,f7dc00,583,306\n" +
-            "Circle Line,Temple,f7dc00,635,268\n" +
-            "Circle Line,Blackfriars,f7dc00,705,258\n" +
-            "Circle Line,Mansion House,f7dc00,764,259\n" +
-            "Circle Line,Cannon Street,f7dc00,786,266\n" +
-            "Circle Line,Tower Hill,f7dc00,874,281\n" +
-            "Circle Line,Aldgate,f7dc00,881,236\n" +
-            "Circle Line,Liverpool Street,f7dc00,837,199\n" +
-            "Circle Line,Moorgate,f7dc00,797,192\n" +
-            "Circle Line,Barbican,f7dc00,738,173\n" +
-            "Circle Line,Farringdon,f7dc00,691,174\n'" +
-            "Circle Line,King's Cross St. Pacras,f7dc00,572,67\n" +
-            "Circle Line,Euston Square,f7dc00,496,117\n" +
-            "Circle Line,Great Portland Street,f7dc00,445,138\n" +
-            "Circle Line,Edgware Road,f7dc00,292,181\n" +
-            "Circle Line,Paddington,f7dc00,244,224\n" +
-            "Victoria Line,King's Cross St. Pancras,0076bd,572,67\n" +
-            "Victoria Line,Euston,0076bd,509,94\n" +
-            "Victoria Line,Warren Street,0076bd,480,132\n" +
-            "Victoria Line,Oxford Circus,0076bd,460,227\n" +
-            "Victoria Line,Green Park,0076bd,452,313\n" +
-            "Victoria Line,Victoria,0076bd,440,416\n" +
-            "Victoria Line,Pimclo,0076bd,515,490\n" +
-            "Victoria Line,Vauxhall,0076bd,563,522\n" +
-            "District Line,Edgware Road,0d6928,292,181\n" +
-            "District Line,Paddington,0d6928,244,224\n" +
-            "District Line,Bayswater,0d6928,165,257\n" +
-            "District Line,Notting Hill Gate,0d6928,108,285\n" +
-            "District Line,High Street Kensington,0d6928,135,371\n" +
-            "District Line,Earl's Court,0d6928,105,462\n" +
-            "District Line,Gloucester Road,0d6928,197,437\n" +
-            "District Line,South Kensington,0d6928,254,441\n" +
-            "District Line,Sloane Square,0d6928,365,459\n" +
-            "District Line,Victoria,0d6928,440,416\n" +
-            "District Line,St. James Park,0d6928,511,387\n" +
-            "District Line,Westminster,0d6928,563,371\n" +
-            "District Line,Embankment,0d6928,583,306\n" +
-            "District Line,Temple,0d6928,635,268\n" +
-            "District Line,Blackfriars,0d6928,705,258\n" +
-            "District Line,Mansion House,0d6928,764,259\n" +
-            "District Line,Cannon Street,0d6928,786,266\n" +
-            "District Line,Tower Hill,0d6928,874,281\n" +
-            "District Line,Aldgate East,0d6928,899,224\n" +
-            "Metropolitan Line,Baker Street,8b004c,361,150\n" +
-            "Metropolitan Line,Great Portland Street,8b004c,445,138\n" +
-            "Metropolitan Line,Euston Square,8b004c,496,117\n" +
-            "Metropolitan Line,King's Cross St. Pacras,8b004c,572,67\n" +
-            "Metropolitan Line,Farringdon,8b004c,691,174\n" +
-            "Metropolitan Line,Barbican,8b004c,738,173\n" +
-            "Metropolitan Line,Moorgate,8b004c,797,192\n" +
-            "Metropolitan Line,Liverpool Street,8b004c,837,199\n" +
-            "Metropolitan Line,Aldgate,8b004c,881,236\n" +
-            "Hammersmith & City Line,Paddington,f5a6b3,242,212\n" +
-            "Hammersmith & City Line,Edgware Road,f5a6b3,292,181\n" +
-            "Hammersmith & City Line,Baker Street,f5a6b3,361,150\n" +
-            "Hammersmith & City Line,Great Portland Street,f5a6b3,445,138\n" +
-            "Hammersmith & City Line,Euston Square,f5a6b3,496,117\n" +
-            "Hammersmith & City Line,King's Cross St. Pacras,f5a6b3,572,67\n" +
-            "Hammersmith & City Line,Farringdon,f5a6b3,691,174\n" +
-            "Hammersmith & City Line,Barbican,f5a6b3,738,173\n" +
-            "Hammersmith & City Line,Moorgate,f5a6b3,797,192\n" +
-            "Hammersmith & City Line,Liverpool Street,f5a6b3,837,199\n" +
-            "Hammersmith & City Line,Aldgate East,f5a6b3,899,224\n" +
-            "Jubilee Line,Baker Street,767b7f,361,150\n" +
-            "Jubilee Line,Bond Street,767b7f,410,236\n" +
-            "Jubilee Line,Green Park,767b7f,452,313\n" +
-            "Jubilee Line,Westminster,767b7f,563,371\n" +
-            "Jubilee Line,Waterloo,767b7f,633,344\n" +
-            "Jubilee Line,Southwark,767b7f,693,341\n" +
-            "Jubilee Line,London Bridge,767b7f,811,328\n" +
-            "Northern Line,Waterloo,000000,633,344\n" +
-            "Northern Line,Embankment,000000,583,306\n" +
-            "Northern Line,Charing Cross,000000,583,305\n" +
-            "Northern Line,Leicester Square,000000,546,266\n" +
-            "Northern Line,Tottenham Court Road,000000,527,213\n" +
-            "Northern Line,Goodge Street,000000,505,172\n" +
-            "Northern Line,Warren Street,000000,480,132\n" +
-            "Northern Line,Euston,000000,509,94\n" +
-            "Northern Line,King's Cross St. Pancras,000000,572,67\n" +
-            "Northern Line,Angel,000000,685,53\n" +
-            "Northern Line,Old Street,000000,805,112\n" +
-            "Northern Line,Liverpool Street,000000,837,199\n" +
-            "Northern Line,Bank,000000,797,245\n" +
-            "Northern Line,London Bridge,000000,811,328\n" +
-            "Northern Line,Borough,000000,760,372\n" +
-            "Northern Line,Elephant & Castle,000000,723,438\n" +
-            "Waterloo & City Line,Waterloo,89cbc1,633,344\n" +
-            "Waterloo & City Line,Bank,89cbc1,797,245\n";
 
-    public void search(ActionEvent event) {
+    @FXML
+    public ListView routeOutput;
+
+    @FXML
+    public Button initialiseMapButton;
+
+    @FXML
+    public MenuButton startStation;
+
+    @FXML
+    public MenuButton destinationStation;
+
+    @FXML
+    public MenuButton avoidStation;
+
+
+    private Station selectedWaypointStation;
+
+    private Circle firstStationRing;
+
+    private Circle destinationStationCircle;
+
+    private Circle firstStationCircle;
+
+    private Station selectedDestinationStation;
+
+    private Station firstSelectedStation;
+
+    private Circle destinationStationOuterRing;
+
+    private boolean isMapPopulated = false;
+
+
+
+    public void initialiseMap(ActionEvent actionEvent) {
+        // Check if the map is populated
+        if (isMapPopulated) {
+            System.out.println("Map already populated");
+            return;
+        }
+        String csvData = "Central Stationline,Notting Hill Gate,df002c,111,292\n" +
+                "Central Stationline,Queensway,df002c,170,278\n" +
+                "Central Stationline,Lancaster Gate,df002c,249,266\n" +
+                "Central Stationline,Marble Arch,df002c,360,249\n" +
+                "Central Stationline,Bond Street,df002c,419,242\n" +
+                "Central Stationline,Oxford Circus,df002c,471,234\n" +
+                "Central Stationline,Tottenham Court Road,df002c,539,218\n" +
+                "Central Stationline,Holborn,df002c,611,209\n" +
+                "Central Stationline,Chancery Lane,df002c,670,197\n" +
+                "Central Stationline,St. Paul's,df002c,760,238\n" +
+                "Central Stationline,Bank,df002c,816,252\n" +
+                "Central Stationline,Liverpool Street,df002c,857,204\n" +
+                "Picadilly Stationline,Earl's Court,002d73,107,473\n" +
+                "Picadilly Stationline,Gloucester Road,002d73,201,448\n" +
+                "Picadilly Stationline,South Kensington,002d73,260,452\n" +
+                "Picadilly Stationline,Knightsbridge,002d73,346,375\n" +
+                "Picadilly Stationline,Hyde Park Corner,002d73,398,362\n" +
+                "Picadilly Stationline,Green Park,002d73,462,321\n" +
+                "Picadilly Stationline,Picadilly Circus,002d73,519,288\n" +
+                "Picadilly Stationline,Leicester Square,002d73,558,272\n" +
+                "Picadilly Stationline,Covent Garden,002d73,584,256\n" +
+                "Picadilly Stationline,Holborn,002d73,611,209\n" +
+                "Picadilly Stationline,Russell Square,002d73,582,150\n" +
+                "Picadilly Stationline,King's Cross St. Pancras,002d73,586,69\n" +
+                "Bakerloo Stationline,Paddington,ab6612,249,223\n" +
+                "Bakerloo Stationline,Edgware Road,ab6612,292,182\n" +
+                "Bakerloo Stationline,Marylebone,ab6612,330,155\n" +
+                "Bakerloo Stationline,Baker Street,ab6612,369,154\n" +
+                "Bakerloo Stationline,Regent's Park,ab6612,434,150\n" +
+                "Bakerloo Stationline,Oxford Circus,ab6612,471,234\n" +
+                "Bakerloo Stationline,Picadilly Circus,ab6612,519,288\n" +
+                "Bakerloo Stationline,Charing Cross,ab6612,581,307\n" +
+                "Bakerloo Stationline,Embankment,ab6612,595,313\n" +
+                "Bakerloo Stationline,Waterloo,ab6612,649,353\n" +
+                "Bakerloo Stationline,Lambeth North,ab6612,663,403\n" +
+                "Bakerloo Stationline,Elephant & Castle,ab6612,741,450\n" +
+                "Circle Stationline,Edgware Road,f7dc00,292,181\n" +
+                "Circle Stationline,Paddington,f7dc00,249,223\n" +
+                "Circle Stationline,Bayswater,f7dc00,168,264\n" +
+                "Circle Stationline,Notting Hill Gate,f7dc00,111,292\n" +
+                "Circle Stationline,High Street Kensington,f7dc00,138,381\n" +
+                "Circle Stationline,Gloucester Road,f7dc00,201,448\n" +
+                "Circle Stationline,South Kensington,f7dc00,260,452\n" +
+                "Circle Stationline,Sloane Square,f7dc00,373,470\n" +
+                "Circle Stationline,Victoria,f7dc00,450,427\n" +
+                "Circle Stationline,St. James Park,f7dc00,523,396\n" +
+                "Circle Stationline,Westminster,f7dc00,576,380\n" +
+                "Circle Stationline,Embankment,f7dc00,595,313\n" +
+                "Circle Stationline,Temple,f7dc00,649,274\n" +
+                "Circle Stationline,Blackfriars,f7dc00,722,265\n" +
+                "Circle Stationline,Mansion House,f7dc00,782,265\n" +
+                "Circle Stationline,Cannon Street,f7dc00,804,272\n" +
+                "Circle Stationline,Tower Hill,f7dc00,894,288\n" +
+                "Circle Stationline,Aldgate,f7dc00,902,241\n" +
+                "Circle Stationline,Liverpool Street,f7dc00,857,204\n" +
+                "Circle Stationline,Moorgate,f7dc00,816,196\n" +
+                "Circle Stationline,Barbican,f7dc00,755,177\n" +
+                "Circle Stationline,Farringdon,f7dc00,707,178\n" +
+                "Circle Stationline,King's Cross St. Pancras,f7dc00,586,69\n" +
+                "Circle Stationline,Euston Square,f7dc00,508,119\n" +
+                "Circle Stationline,Great Portland Street,f7dc00,455,142\n" +
+                "Circle Stationline,Paddington,f7dc00,249,223\n" +
+                "Victoria Stationline,King's Cross St. Pancras,0076bd,586,69\n" +
+                "Victoria Stationline,Euston,0076bd,522,96\n" +
+                "Victoria Stationline,Warren Street,0076bd,491,135\n" +
+                "Victoria Stationline,Oxford Circus,0076bd,471,234\n" +
+                "Victoria Stationline,Green Park,0076bd,462,321\n" +
+                "Victoria Stationline,Victoria,0076bd,450,427\n" +
+                "Victoria Stationline,Pimlico,0076bd,524,502\n" +
+                "Victoria Stationline,Vauxhall,0076bd,576,535\n" +
+                "District Stationline,Edgware Road,0d6928,292,181\n" +
+                "District Stationline,Paddington,0d6928,249,223\n" +
+                "District Stationline,Bayswater,0d6928,168,264\n" +
+                "District Stationline,Notting Hill Gate,0d6928,111,292\n" +
+                "District Stationline,High Street Kensington,0d6928,138,381\n" +
+                "District Stationline,Earl's Court,0d6928,107,473\n" +
+                "District Stationline,Gloucester Road,0d6928,201,448\n" +
+                "District Stationline,South Kensington,0d6928,260,452\n" +
+                "District Stationline,Sloane Square,0d6928,373,470\n" +
+                "District Stationline,Victoria,0d6928,450,427\n" +
+                "District Stationline,St. James Park,0d6928,523,396\n" +
+                "District Stationline,Westminster,0d6928,576,380\n" +
+                "District Stationline,Embankment,0d6928,595,313\n" +
+                "District Stationline,Temple,0d6928,649,274\n" +
+                "District Stationline,Blackfriars,0d6928,722,265\n" +
+                "District Stationline,Mansion House,0d6928,782,265\n" +
+                "District Stationline,Cannon Street,0d6928,804,272\n" +
+                "District Stationline,Tower Hill,0d6928,894,288\n" +
+                "District Stationline,Aldgate East,0d6928,912,263\n" +
+                "District Stationline,Whitechapel,0d6928,958,263\n" +
+                "District Stationline,Stepney Green,0d6928,1010,263\n" +
+                "District Stationline,Mile End,0d6928,1060,263\n" +
+                "District Stationline,Bow Road,0d6928,1106,263\n" +
+                "District Stationline,Bromley-by-Bow,0d6928,1158,263\n" +
+                "District Stationline,West Ham,0d6928,1210,263\n" +
+                "District Stationline,Plaistow,0d6928,1262,263\n" +
+                "District Stationline,Upton Park,0d6928,1314,263\n" +
+                "District Stationline,East Ham,0d6928,1366,263\n" +
+                "District Stationline,Barking,0d6928,1418,263\n";
+        Map<String, Stationline> lines = parseCSVData(csvData);
+        // Iterate over the lines and print their stations
+        for (Map.Entry<String, Stationline> entry : lines.entrySet()) {
+            System.out.println(entry.getKey() + " - " + entry.getValue().getLineColor());
+            for (Station station : entry.getValue().getStations()) {
+                System.out.println("\t" + station.getStationName() + " (" + station.getXcoord() + "," + station.getYcoord() + ")");
+            }
+            System.out.println("\n");
+        }
+
+        populateMenuButtons(lines);
+
+
+        //After filling the map, set the boolean to true.
+        isMapPopulated = true;
     }
 
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-            TableColumn<Route, String> routeColumn = new TableColumn<>("Route");
-            routeColumn.setCellValueFactory(new PropertyValueFactory<>("routeString"));
-            routeColumn.setPrefWidth(400);
 
-            routesTableView.getColumns().add(routeColumn);
+    private Map<String, Stationline> parseCSVData(String csvData) {
+        Map<String, Stationline> lines = new HashMap<>();
+        // Split the csvData to get each line
+        String[] csvLines = csvData.split("\n");
+
+        // Loop through each line in the csv string
+        for (String line : csvLines) {
+            // Split the line by a comma
+            String[] values = line.split(",");
+
+            // Check for correct values
+            if (values.length != 5) {
+                System.err.println("Invalid line in CSV: " + line);
+                continue;
+            }
+
+            // Get values
+            String lineName = values[0].trim();
+            String stationName = values[1].trim();
+            String color = values[2].trim();
+            double x = Double.parseDouble(values[3].trim());
+            double y = Double.parseDouble(values[4].trim());
+
+            // Create or retrieve the Stationline object
+            Stationline lineObj = lines.get(lineName);
+            if (lineObj == null) {
+                lineObj = new Stationline(lineName, color);
+                lines.put(lineName, lineObj);
+            }
+
+            // Create or retrieve the Station object
+            Station stationObj = stations.get(stationName);
+            if (stationObj == null) {
+                stationObj = new Station(stationName, x, y);
+                stations.put(stationName, stationObj);
+            }
+
+            // Add the station to the line
+            lineObj.addStation(stationObj);
+
+
+            // Get the previous station on the line, if it exists
+            List<Station> currentLineStations = lineObj.getStations();
+            if (currentLineStations.size() > 1) {
+                Station previousStation = currentLineStations.get(currentLineStations.size() - 2);
+
+                // Calculate the distance between the current and previous stations
+                double distance = Math.sqrt(Math.pow(stationObj.getXcoord() - previousStation.getXcoord(), 2)
+                        + Math.pow(stationObj.getYcoord() - previousStation.getYcoord(), 2));
+                // Print the distances
+                System.out.println("Calculating distance between " + previousStation.getStationName() + " and " + stationObj.getStationName());
+                System.out.println("Previous station coordinates: " + previousStation.getXcoord() + ", " + previousStation.getYcoord());
+                System.out.println("Current station coordinates: " + stationObj.getXcoord() + ", " + stationObj.getYcoord());
+                System.out.println("Calculated distance: " + distance);
+
+                // Add the current station as a neighbor to the previous station, if they are not already neighbors
+                if (!previousStation.getNeighborStations().containsKey(stationObj)) {
+                    previousStation.addNeighbor(stationObj);
+                    System.out.println("Added " + stationObj.getStationName() + " as a neighbor to " + previousStation.getStationName());
+                }
+
+                // Add the previous station as a neighbor to the current station, if they are not already neighbors
+                if (!stationObj.getNeighborStations().containsKey(previousStation)) {
+                    stationObj.addNeighbor(previousStation);
+                    System.out.println("Added " + previousStation.getStationName() + " as a neighbor to " + stationObj.getStationName());
+                }
+            }
+        }
+
+        return lines;
     }
 
+    private void handleMenuClick(ActionEvent event, Station station) {
+        MenuItem clickedMenuItem = (MenuItem) event.getSource();
+        MenuButton parentMenuButton = (MenuButton) clickedMenuItem.getParentPopup().getOwnerNode();
+
+        // Set the selected station as the text of the parent MenuButton
+        parentMenuButton.setText(station.getStationName());
+
+        if (parentMenuButton == startStation) {
+            firstSelectedStation = station;
+            drawFirstCircle(station);
+        } else if (parentMenuButton == destinationStation) {
+            selectedDestinationStation = station;
+            drawDestinationCircle(station);
+        }
+    }
+
+    // This method draws a line between each station on the path
+    private void drawShortestPath(Path shortestRoute) {
+        // Remove any existing lines from the mapPane
+        mapPane.getChildren().removeIf(node -> node instanceof javafx.scene.shape.Line);
+        // Get the list of stations in the shortest path
+        List<Station> shortestPath = shortestRoute.getPath();
+        // Draw a line between each pair of adjacent stations in the shortest path
+        for (int i = 0; i < shortestPath.size() - 1; i++) {
+            Station start = shortestPath.get(i);
+            Station end = shortestPath.get(i + 1);
+
+            drawLineBetweenStations(start, end, Color.PURPLE);
+        }
+    }
+
+    //Based on the scale of the map image and the relative coordinates, this method computes the precise coordinates of a station on the mapPane.
+    private Point2D calculateActualCoordinates(Station station) {
+        double scaleX = mapImageView.getBoundsInLocal().getWidth() / mapImageView.getImage().getWidth();
+        double scaleY = mapImageView.getBoundsInLocal().getHeight() / mapImageView.getImage().getHeight();
+
+        double actualX = station.getXcoord() * scaleX;
+        double actualY = station.getYcoord() * scaleY;
+
+        return new Point2D(actualX, actualY);
+    }
+
+    //By utilizing the station's precise coordinates, this method generates a colored circle to represent the station on the map.
+    private void createStationCircle(Circle innerCircle, Circle outerRing, Station station, Color color) {
+        // Calculate the coordinates of the station on the mapPane
+        Point2D actualCoordinates = calculateActualCoordinates(station);
+
+        // Set the radius and centre of the circle
+        innerCircle.setCenterX(actualCoordinates.getX());
+        innerCircle.setCenterY(actualCoordinates.getY());
+        innerCircle.setRadius(5);
+        innerCircle.setFill(color);
+
+        outerRing.setCenterX(actualCoordinates.getX());
+        outerRing.setCenterY(actualCoordinates.getY());
+        outerRing.setRadius(5); // Slightly larger radius for the outer ring
+        outerRing.setFill(Color.TRANSPARENT);
+        outerRing.setStroke(color);
+        outerRing.setStrokeWidth(2);
+    }
+
+
+    // this method draws the circle we have already on a starting station red
+    private void drawFirstCircle(Station station) {
+        // Remove any existing circle
+        if (firstStationCircle != null) {
+            mapPane.getChildren().removeAll(firstStationCircle, firstStationRing);
+        }
+        // Makes a new circle on the station picked
+        firstStationCircle = new Circle();
+        firstStationRing = new Circle();
+        createStationCircle(firstStationCircle, firstStationRing, station, Color.RED);
+        // puts new circle on the map pane
+        mapPane.getChildren().addAll(firstStationCircle, firstStationRing);
+    }
+
+    // This method draws an aqua circle on the selected destination
+    private void drawDestinationCircle(Station station) {
+        // Remove any existing end station circle and outer ring from the mapPane
+        if (destinationStationCircle != null) {
+            mapPane.getChildren().removeAll(destinationStationCircle, destinationStationOuterRing);
+        }
+        // Create a new circle and outer ring with the specified station and color
+        destinationStationCircle = new Circle();
+        destinationStationOuterRing = new Circle();
+        createStationCircle(destinationStationCircle, destinationStationOuterRing, station, Color.AQUA);
+        // Add the new circle and outer ring to the mapPane
+        mapPane.getChildren().addAll(destinationStationCircle, destinationStationOuterRing);
+    }
+
+    private void populateMenuButtons(Map<String, Stationline> lines) {
+        Set<Station> uniqueStationsSet = new HashSet<>();
+        // Loop through each Stationline object in the lines Map
+        for (Stationline line : lines.values()) {
+            // Loop through each Station object in the Stationline's stations
+            // Add the station to the uniqueStations set
+            uniqueStationsSet.addAll(line.getStations());
+        }
+        // Convert the Set to a List
+        List<Station> uniqueStationsList = new ArrayList<>(uniqueStationsSet);
+        // Sort list of stations alphabetically
+        uniqueStationsList.sort(Comparator.comparing(Station::getStationName));
+        // Add the stations to the menu button
+        avoidStation.getItems().addAll(createStationMenuItems(uniqueStationsList));
+        waypointStation.getItems().addAll(createStationMenuItems(uniqueStationsList));
+        startStation.getItems().addAll(createStationMenuItems(uniqueStationsList));
+        destinationStation.getItems().addAll(createStationMenuItems(uniqueStationsList));
+    }
+
+    private List<MenuItem> createStationMenuItems(List<Station> stations) {
+        List<MenuItem> stationMenuItems = new ArrayList<>();
+        for (Station station : stations) {
+            MenuItem menuItem = new MenuItem(station.getStationName());
+            menuItem.setOnAction(e -> handleMenuClick(e, station));
+            stationMenuItems.add(menuItem);
+        }
+        return stationMenuItems;
+    }
+
+
+    // This method draws a line between two stations with a given color
+    private void drawLineBetweenStations(Station start, Station end, Color color) {
+        // Calculate the actual coordinates of the start and end stations on the mapPane
+        Point2D startPoint = calculateActualCoordinates(start);
+        Point2D endPoint = calculateActualCoordinates(end);
+        // Create a new line with the calculated start and end points and set its color and width
+        javafx.scene.shape.Line line = new javafx.scene.shape.Line(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
+        line.setStroke(color);
+        line.setStrokeWidth(4);
+        // Add the line to the mapPane
+        mapPane.getChildren().add(line);
+    }
+
+
+    // This method is called when the user wants to perform a breadth-first search to find the shortest path between two selected stations
+    public void bfsSearch(ActionEvent actionEvent) {
+        // Determine the shortest route between the selected starting and destination stations using the Graph's findShortestPath method
+        Path shortestRoute = graph.bfsAlgorithm(firstSelectedStation, selectedDestinationStation);
+
+        // Display an error message if no path is found
+        if (shortestRoute == null) {
+            System.out.println("No path found between the selected stations");
+        } else {
+            // If a path is found, print the path and the number of stops
+            List<Station> path = shortestRoute.getPath();
+            System.out.println(path.get(0).getStationName() + " to " + path.get(path.size()-1).getStationName());
+
+            // Initialize variables to track the current and next lines
+            Stationline currentLine = null;
+            Stationline nextLine = null;
+
+            // Initialize lists to store the station path and line changes
+            List<String> stationPath = new ArrayList<>();
+            List<String> lineChanges = new ArrayList<>();
+
+            // Iterate over each station in the path
+            for (int i = 0; i < path.size() - 1; i++) {
+                Station station1 = path.get(i);
+                Station station2 = path.get(i + 1);
+
+                // Get the common lines between the two stations
+                List<Stationline> commonLines = getCommonLines(station1, station2);
+
+                // If there is no current line or the current line is not in the list of common lines,
+                // update the current line and print it
+                if (currentLine == null || !commonLines.contains(currentLine)) {
+                    // Update the current line (select the first one from the list for simplicity)
+                    nextLine = commonLines.get(0);
+
+                    // Add the line change to the list
+                    if (i != 0) { // Avoid adding a line change for the first station
+                        lineChanges.add(currentLine.getLineName() + " to " + station1.getStationName());
+                        lineChanges.add(nextLine.getLineName());
+                    } else { // Handle the initial line at the starting station
+                        lineChanges.add(nextLine.getLineName());
+                    }
+                    currentLine = nextLine;
+                }
+
+                // Add the station to the station path list
+                stationPath.add(station1.getStationName());
+            }
+
+            // Add the final station to the station path list
+            stationPath.add(path.get(path.size() - 1).getStationName());
+
+            // Add the final line change to the list
+            lineChanges.add("Take the " + currentLine.getLineName() + " to " + path.get(path.size()-1).getStationName());
+
+            // Print the station path
+            System.out.println("Shortest path: ");
+            System.out.println(String.join(" -> ", stationPath));
+
+            // Print the line changes
+            System.out.println(String.join("\n", lineChanges));
+            System.out.println("Number of stops: " + shortestRoute.getStops());
+            drawShortestPath(shortestRoute);
+
+            // Update the ListView
+            List<String> outputLines = new ArrayList<>();
+
+            // Add the BFS header indicating the starting and destination stations
+            outputLines.add("\nBFS: " + firstSelectedStation.getStationName() + " to " + selectedDestinationStation.getStationName());
+            outputLines.add("Number of stops: " + shortestRoute.getStops());
+            // Iterate over the stations in the path and add appropriate markers
+            for (int i = 0; i < path.size(); i++) {
+                if (i == 0 || i == path.size() - 1) {
+                    // Add a special marker for the first and last stations
+                    outputLines.add("** " + path.get(i).getStationName() + " **");
+                } else {
+                    // Add a downward arrow marker for intermediate stations
+                    outputLines.add("-- " + path.get(i).getStationName());
+                }
+            }
+
+            // Add the line directions header and the list of line changes
+            outputLines.add("\nStationline Directions:");
+            outputLines.addAll(lineChanges);
+
+            // Create an observable list and populate it with the output lines
+            ObservableList<String> items = FXCollections.observableArrayList(outputLines);
+            routeOutput.setItems(items);
+        }
+    }
+
+    // This method finds the shortest path between two stations using dijkstras algorithm
+    //use high street kensington and chancery lane to see difference in the two algorithms
+    public void dijkstraSearch(ActionEvent actionEvent) {
+        if (firstSelectedStation == null || selectedDestinationStation == null) {
+            System.out.println("Please select both start and end stations");
+            return;
+        }
+
+        Set<Station> allStations = new HashSet<>(stations.values());
+        Path shortestRoute = graph.dijkstraAlgorithm(allStations, firstSelectedStation, selectedDestinationStation);
+
+        if (shortestRoute == null) {
+            System.out.println("No path found between the selected stations");
+        } else {
+            List<Station> path = shortestRoute.getPath();
+            System.out.println(path.get(0).getStationName() + " to " + path.get(path.size() - 1).getStationName());
+
+            Stationline currentLine = null;
+            Stationline nextLine = null;
+
+            List<String> stationPath = new ArrayList<>();
+            List<String> lineChanges = new ArrayList<>();
+
+            double totalLineChangeTime = 0.0;
+            double lineChangeTime = 20.0;
+
+            for (int i = 0; i < path.size() - 1; i++) {
+                Station station1 = path.get(i);
+                Station station2 = path.get(i + 1);
+
+                List<Stationline> commonLines = getCommonLines(station1, station2);
+
+                if (currentLine == null || !commonLines.contains(currentLine) || !currentLine.equals(nextLine)) {
+                    // Update the current line
+                    nextLine = commonLines.get(0);
+
+                    // Add the line change to the list
+                    if (i != 0) { // Avoid adding a line change for the first station
+                        lineChanges.add("Take " + currentLine.getLineName() + " to " + station1.getStationName());
+                        lineChanges.add("Change to " + nextLine.getLineName());
+                        totalLineChangeTime += lineChangeTime;  // or totalLineChangeDistance += lineChangeDistance;
+                    } else { // Handle the initial line at the starting station
+                        lineChanges.add("Start with " + nextLine.getLineName());
+                    }
+                    currentLine = nextLine;
+                }
+
+                stationPath.add(station1.getStationName());
+            }
+
+            stationPath.add(path.get(path.size() - 1).getStationName());
+            lineChanges.add("Take " + currentLine.getLineName() + " to " + path.get(path.size() - 1).getStationName());
+
+            System.out.println("Shortest path: ");
+            System.out.println(String.join(" -> ", stationPath));
+
+            System.out.println(String.join("\n", lineChanges));
+
+            DecimalFormat decimalFormat = new DecimalFormat("#.00");
+            String roundedLineChangeTime = decimalFormat.format(totalLineChangeTime);
+
+            System.out.println("Total Stationline Change Time/Distance: " + roundedLineChangeTime);
+
+            drawShortestPath(shortestRoute);
+
+            // Calculate total time
+            double totalTime = shortestRoute.getDistance() + totalLineChangeTime;
+
+            List<String> outputLines = new ArrayList<>();
+            outputLines.add("\nDijkstra: " + firstSelectedStation.getStationName() + " to " + selectedDestinationStation.getStationName());
+            outputLines.add("Total Base Time: " + decimalFormat.format(shortestRoute.getDistance()) + " seconds");
+            outputLines.add("Total Stationline Change Time: " + roundedLineChangeTime + " seconds");
+            outputLines.add("Total Time: " + decimalFormat.format(totalTime) + " seconds");
+
+            for (int i = 0; i < path.size(); i++) {
+                if (i == 0 || i == path.size() - 1) {
+                    outputLines.add("** " + path.get(i).getStationName() + " **");
+                } else {
+                    outputLines.add("-- " + path.get(i).getStationName());
+                }
+            }
+            ObservableList<String> items = FXCollections.observableArrayList(outputLines);
+            routeOutput.setItems(items);
+
+        }
+    }
+
+    public List<Stationline> getCommonLines(Station station1, Station station2) {
+        // Initialize a new list with the lines of the first station
+        List<Stationline> commonLines = new ArrayList<>(station1.getLines());
+
+        // Keep only the lines that are also present in the lines of the second station
+        commonLines.retainAll(station2.getLines());
+
+        // Return the list of shared lines
+        return commonLines;
+    }
+
+    private Station findNearestStation(double x, double y) {
+        // Initialize variables to store the nearest station and its distance
+        Station nearestStation = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        // Iterate over all stations to find the nearest one
+        for (Station station : stations.values()) {
+            // Calculate the distance between the given coordinates and the station's coordinates
+            double distance = calculateDistance(x, y, station.getXcoord(), station.getYcoord());
+
+            // If the calculated distance is smaller than the current nearest distance,
+            // update the nearest station and nearest distance
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestStation = station;
+            }
+        }
+        return nearestStation;
+    }
+
+    private double calculateDistance(double x1, double y1, double x2, double y2) {
+        //Use Euclidean Formula to calculate the distance between two points
+        return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+    }
+
+    private void selectMenuItem(MenuButton menuButton, String stationName) {
+        // Iterate through menuButton's items list and select item with matching stationName
+        for (MenuItem item : menuButton.getItems()) {
+            if (item.getText().equals(stationName)) {
+                // Set menuButton's text to selected item's text
+                menuButton.setText(item.getText());
+                break;
+            }
+        }
+    }
+
+    public void clearMap(ActionEvent actionEvent) {
+        //clear lines
+        mapPane.getChildren().removeIf(node -> node instanceof javafx.scene.shape.Line);
+        //clear listview
+        routeOutput.getItems().clear();
+    }
+
+
+    public void initialize(URL url, ResourceBundle resourceBundle){
+        maincon = this; // Set the maincon to this instance of the controller
+    }
+
+    public void avoidStation(ActionEvent event) {
+    }
+
+    public void removeStation(ActionEvent event) {
+    }
+
+    public void removeWaypoint(ActionEvent event) {
+    }
+
+    public void addWaypoint(ActionEvent event) {
+    }
+
+    public void dijkstraNoLineSearch(ActionEvent event) {
+        if (firstSelectedStation == null || selectedDestinationStation == null) {
+            return;
+        }
+
+        Set<Station> allStations = new HashSet<>(stations.values());
+        Path shortestRoute = graph.dijkstraAlgorithm(allStations, firstSelectedStation, selectedDestinationStation);
+
+        if (shortestRoute == null) {
+            System.out.println("No path found");
+        } else {
+            List<Station> path = shortestRoute.getPath();
+            System.out.println(path.get(0).getStationName() + " to " + path.get(path.size() - 1).getStationName());
+
+            Stationline currentLine = null;
+            Stationline nextLine = null;
+
+            List<String> stationPath = new ArrayList<>();
+            List<String> lineChanges = new ArrayList<>();
+
+            for (int i = 0; i < path.size() - 1; i++) {
+                Station station1 = path.get(i);
+                Station station2 = path.get(i + 1);
+
+                List<Stationline> commonLines = getCommonLines(station1, station2);
+
+                if (currentLine == null || !commonLines.contains(currentLine) || !currentLine.equals(nextLine)) {
+                    nextLine = commonLines.get(0);
+
+                    if (i != 0) {
+                        lineChanges.add("Take the" + currentLine.getLineName() + " to " + station1.getStationName());
+                        lineChanges.add("Change line to " + nextLine.getLineName());
+                    } else {
+                        lineChanges.add("Start on  " + nextLine.getLineName());
+                    }
+
+                    currentLine = nextLine;
+                }
+
+                stationPath.add(station1.getStationName());
+            }
+
+            stationPath.add(path.get(path.size() - 1).getStationName());
+            lineChanges.add("Take " + currentLine.getLineName() + " to " + path.get(path.size() - 1).getStationName());
+
+            System.out.println("Shortest path: ");
+            System.out.println(String.join(" -> ", stationPath));
+
+            System.out.println(String.join("\n", lineChanges));
+
+            drawShortestPath(shortestRoute);
+
+            // Calculate total time
+            double totalTime = shortestRoute.getDistance();
+
+            DecimalFormat decimalFormat = new DecimalFormat("#.00");
+            List<String> outputLines = new ArrayList<>();
+            outputLines.add("\nDijkstra: " + firstSelectedStation.getStationName() + " to " + selectedDestinationStation.getStationName());
+            outputLines.add("Total Time: " + decimalFormat.format(totalTime) + " seconds");
+
+            for (int i = 0; i < path.size(); i++) {
+                if (i == 0 || i == path.size() - 1) {
+                    outputLines.add("** " + path.get(i).getStationName() + " **");
+                } else {
+                    outputLines.add("-- " + path.get(i).getStationName());
+                }
+            }
+
+            ObservableList<String> items = FXCollections.observableArrayList(outputLines);
+            routeOutput.setItems(items);
+        }
+    }
 }

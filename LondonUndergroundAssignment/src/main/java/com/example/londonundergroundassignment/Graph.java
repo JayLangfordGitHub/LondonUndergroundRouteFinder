@@ -1,159 +1,126 @@
 package com.example.londonundergroundassignment;
 
+import javafx.fxml.Initializable;
+
+import java.net.URL;
 import java.util.*;
 
-public class Graph {
-    Map<String, Station> stations;
-    Map<String, List<String>> adjacencyList;
+public class Graph implements Initializable {
+    // A static graph object to represent the graph
+    public static Graph graph;
 
-    public Graph() {
-        stations = new HashMap<>();
-        adjacencyList = new HashMap<>();
+    // A station adjacency list to represent vertices on the graph
+    private Map<Station, List<Station>> adjacencyList;
+
+    // Method to get the set of neighbors of a given station
+    public Set<Station> getNeighbors(Station station) {
+        return station.getNeighborStations().keySet();
     }
 
-    public void addStation(Station station) {
-        stations.put(station.stationName, station);
-        adjacencyList.put(station.stationName, new ArrayList<>());
-    }
+    // Method to find the shortest path between two stations using BFS
+    public Path bfsAlgorithm(Station start, Station end) {
+        // Initialize a previous map, queue, and visited set
+        Map<Station, Station> previous = new HashMap<>();
+        Queue<Station> queue = new LinkedList<>();
+        Set<Station> visited = new HashSet<>();
 
-    public void addEdge(String station1, String station2) {
-        adjacencyList.get(station1).add(station2);
-        adjacencyList.get(station2).add(station1);
-    }
+        // Add the start station to the queue and visited set
+        queue.add(start);
+        visited.add(start);
 
-    // DFS
-    public List<String> dfs(String startStation, String destinationStation) {
-        Stack<String> stack = new Stack<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parentMap = new HashMap<>();
-
-        stack.push(startStation);
-        visited.add(startStation);
-
-        while (!stack.isEmpty()) {
-            String current = stack.pop();
-            if (current.equals(destinationStation)) {
-                return constructPath(parentMap, startStation, destinationStation);
-            }
-
-            for (String neighbor : adjacencyList.get(current)) {
-                if (!visited.contains(neighbor)) {
-                    stack.push(neighbor);
-                    visited.add(neighbor);
-                    parentMap.put(neighbor, current);
-                }
-            }
-        }
-
-        return null; // No path found
-    }
-
-    // BFS
-    public List<String> bfs(String startStation, String destinationStation) {
-        Queue<String> queue = new LinkedList<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parentMap = new HashMap<>();
-
-        queue.offer(startStation);
-        visited.add(startStation);
-
+        // While the queue is not empty
         while (!queue.isEmpty()) {
-            String current = queue.poll();
-            if (current.equals(destinationStation)) {
-                return constructPath(parentMap, startStation, destinationStation);
-            }
+            // Get the next station from the queue
+            Station current = queue.poll();
 
-            for (String neighbor : adjacencyList.get(current)) {
-                if (!visited.contains(neighbor)) {
-                    queue.offer(neighbor);
-                    visited.add(neighbor);
-                    parentMap.put(neighbor, current);
+            // If we have reached the end station, build the path and return it
+            if (current.equals(end)) {
+                List<Station> path = new ArrayList<>();
+                int stops = 0;
+
+                Station pathStation = end;
+                while (pathStation != null) {
+                    path.add(0, pathStation);
+                    pathStation = previous.get(pathStation);
+                    stops++;
                 }
-            }
-        }
 
-        return null; // No path found
-    }
-
-    // Dijkstra's Algorithm
-    public List<String> dijkstra(String startStation, String destinationStation) {
-        Map<String, Double> distances = new HashMap<>();
-        Map<String, String> previous = new HashMap<>();
-        Set<String> unvisited = new HashSet<>();
-
-        for (String station : adjacencyList.keySet()) {
-            distances.put(station, Double.MAX_VALUE);
-            unvisited.add(station);
-        }
-
-        distances.put(startStation, 0.0);
-
-        while (!unvisited.isEmpty()) {
-            String current = getClosestStation(unvisited, distances);
-            unvisited.remove(current);
-
-            if (current.equals(destinationStation)) {
-                return constructPath(previous, startStation, destinationStation);
+                return new Path(path, stops - 1);
             }
 
-            for (String neighbor : adjacencyList.get(current)) {
-                double tentativeDist = distances.get(current) + distanceBetween(current, neighbor);
-
-                if (tentativeDist < distances.get(neighbor)) {
-                    distances.put(neighbor, tentativeDist);
+            // Otherwise, get the neighbors of the current station and explore them
+            Set<Station> neighbors = getNeighbors(current);
+            for (Station neighbor : neighbors) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    queue.add(neighbor);
                     previous.put(neighbor, current);
                 }
             }
         }
 
-        return null; // No path found
+        // If no path is found, return null
+        return null;
     }
 
-    private List<String> constructPath(Map<String, String> parentMap, String start, String destination) {
-        List<String> path = new ArrayList<>();
-        String current = destination;
 
-        while (current != null) {
-            path.add(0, current);
-            current = parentMap.get(current);
+    // Method to find the shortest path between two stations using Dijkstra's algorithm
+    public Path dijkstraAlgorithm(Set<Station> allStations, Station start, Station end) {
+        // Initialize data structures for distances, previous stations, and a priority queue
+        Map<Station, Double> distances = new HashMap<>();
+        Map<Station, Station> previous = new HashMap<>();
+        PriorityQueue<Station> queue = new PriorityQueue<>((a, b) -> Double.compare(distances.get(a), distances.get(b)));
+
+        // Initialize the distances map with INFINITY distance for all stations, except for the start station, which has distance 0
+        for (Station station : allStations) {
+            distances.put(station, Double.MAX_VALUE);
         }
+        distances.put(start, 0.0);
 
-        return path;
-    }
-    private String getClosestStation(Set<String> unvisited, Map<String, Double> distances) {
-        String closestStation = null;
-        double minDistance = Double.MAX_VALUE;
+        // Start the search from the start station
+        queue.add(start);
 
-        for (String station : unvisited) {
-            double distance = distances.get(station);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestStation = station;
+        while (!queue.isEmpty()) {
+            Station current = queue.poll();
+
+            // If we have reached the end station, build the path and return it
+            if (current.equals(end)) {
+                List<Station> path = new ArrayList<>();
+                double totalDistance = 0.0;
+
+                // Build the path and calculate the total distance by backtracking through the previous stations
+                for (Station station = end; station != null; station = previous.get(station)) {
+                    path.add(0, station);
+                    if (previous.get(station) != null) {
+                        totalDistance += distances.get(station);
+                    }
+                }
+
+                return new Path(path, totalDistance);
+            }
+
+            // Otherwise, get the neighbors of the current station and explore them
+            for (Station neighbor : getNeighbors(current)) {
+                // Calculate the distance from the start station to the neighbor through the current station
+                double distance = distances.get(current) + current.getNeighborStations().get(neighbor);
+
+                // If the calculated distance is smaller than the previously recorded distance, update it
+                if (distance < distances.get(neighbor)) {
+                    distances.put(neighbor, distance);
+                    previous.put(neighbor, current);
+                    queue.add(neighbor);
+                }
             }
         }
 
-        return closestStation;
-    }
-    private double distanceBetween(String station1, String station2) {
-        Station s1 = stations.get(station1);
-        Station s2 = stations.get(station2);
-
-        double lat1 = Math.toRadians(s1.y);
-        double lon1 = Math.toRadians(s1.x);
-        double lat2 = Math.toRadians(s2.y);
-        double lon2 = Math.toRadians(s2.x);
-
-        double dLat = lat2 - lat1;
-        double dLon = lon2 - lon1;
-
-        double a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLon / 2), 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        // Radius of Earth in meters
-        final int R = 6371 * 1000;
-
-        return R * c;
+        // If no path is found, return null
+        return null;
     }
 
 
+    // Method to initialize the Graph object
+    public void initialize(URL url, ResourceBundle resourceBundle){
+        // Set the static graph object to this
+        graph = this;
+    }
 }
