@@ -1,6 +1,6 @@
 # London Underground Route Finder
 ## Description
-SETU BSc (Hons) in Applied Computing (Cloud &amp; Networks) Year 2 Semester 2 Data Structures &amp; Algorithms 2 Assignment 2 - 72%
+SETU BSc (Hons) in Applied Computing (Cloud &amp; Networks) Year 2 Semester 2 Data Structures &amp; Algorithms 2 Assignment 2
 This Project is a javafx project that uses breadth first, depth first and Dijkstra's algorithms to search for routes between two specified stations in the London
 Undergrounds Zone 1. The stations need to be initialised first before with the initialise map button before using any search methods.
 The Dijkstra's algorithm searches by shortest time to get to the destination and breadth first searches by least amount of stations to the destination
